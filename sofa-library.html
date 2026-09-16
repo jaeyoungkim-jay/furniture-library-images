@@ -199,11 +199,12 @@
   .card img.pimg { width: 100%; display: block; }
   .card .logochip {
     position: absolute; left: 9px; top: 9px; background: rgba(246,243,236,0.92);
-    border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; height: 22px;
+    border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; height: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;
   }
   .card .logochip:hover { background: rgba(255,255,255,0.98); box-shadow: 0 1px 5px rgba(0,0,0,0.28); }
-  .card .logochip img { max-height: 15px; max-width: 78px; display: block; }
+  /* 소파 브랜드 로고는 여백 없는 워드마크라 chair(14px/70px)보다 한 단계 작게 */
+  .card .logochip img { max-height: 13px; max-width: 64px; display: block; }
   .card .logochip[data-brand="ki"] { height: 26px; padding: 3px 8px; }
   .card .logochip[data-brand="ki"] img { max-height: 20px; max-width: 84px; }
   .card .logochip[data-brand="sitzone"] { height: 28px; padding: 3px 8px; }
@@ -243,7 +244,7 @@
   .det-hdr-info { flex: 1; min-width: 0; }
   .det-brand-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
   .det-brand-row:hover .det-brand { text-decoration: underline; }
-  .det-logo { max-height: 16px; max-width: 96px; }
+  .det-logo { max-height: 14px; max-width: 82px; }
   .det-logo[data-brand="ki"] { max-height: 22px; }
   .det-logo[data-brand="sitzone"] { max-height: 24px; }
   .det-logo[data-brand="sidiz"] { max-height: 22px; }
@@ -325,8 +326,8 @@
     .card .brandname { font-size: 10px; margin-bottom: 6px; }
     .tag { font-size: 8.5px; padding: 2px 5px; }
     .card .price { font-size: 11px; }
-    .card .logochip { padding: 3px 6px; height: 17px; left: 7px; top: 7px; }
-    .card .logochip img { max-height: 11px; max-width: 56px; }
+    .card .logochip { padding: 3px 6px; height: 16px; left: 7px; top: 7px; }
+    .card .logochip img { max-height: 10px; max-width: 52px; }
     .copy-btn { width: 22px; height: 22px; top: 7px; right: 7px; }
     .copy-btn svg { width: 11px; height: 11px; }
     .brand-info { flex-direction: column; padding: 16px; }
