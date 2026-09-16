@@ -1,0 +1,934 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Sofa Library</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --bg: #ece8df;
+    --paper: #f6f3ec;
+    --panel: #f2eee4;
+    --ink: #241f19;
+    --ink-soft: #5b5346;
+    --muted: #8a8072;
+    --line: #d9d2c3;
+    --accent: #a15a2e;
+    --accent-soft: #ecdfcd;
+    --brand-accent: #2f5d3a;
+    --chair-accent: #e0311c;
+    --ctl-h: 37px;   /* 헤더 검색창·버튼 공통 높이 */
+    --tag-bg: #e4ddcc;
+    --tag-ink: #5b5346;
+    --na: #4a5d52; --na-bg: #dfe6df;
+    --eu: #4a5a7a; --eu-bg: #dfe4ee;
+    --as: #8a4a22; --as-bg: #f0dfcc;
+    --oc: #4a6a63; --oc-bg: #dde9e5;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "IBM Plex Sans KR", "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 14.5px;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+
+  /* ---- Header ---- */
+  .hdr {
+    height: 60px; flex-shrink: 0; background: var(--paper); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 16px; padding: 0 20px;
+  }
+  .hdr-brand { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .hdr-title { font-family: "Zilla Slab", serif; font-weight: 700; font-size: 24px; letter-spacing: -0.01em; margin-right: 6px; }
+  .icon-btn {
+    width: 32px; height: 32px; padding: 0; border: none; border-radius: 7px; background: none;
+    color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .icon-btn svg { width: 18px; height: 18px; display: block; }
+  .icon-btn:hover { background: var(--bg); }
+  .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; background: none; }
+  .lib-link {
+    display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+    height: var(--ctl-h); padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink-soft); text-decoration: none;
+  }
+  .lib-link { transition: border-color .3s ease, color .3s ease, background-color .3s ease; }
+  .lib-link .lib-ic { width: 19px; height: 19px; display: block; flex-shrink: 0; }
+  .lib-link .lib-arrow { width: 9.5px; height: 19px; display: block; flex-shrink: 0; opacity: .65; transition: opacity .3s ease; }
+  /* 평소엔 라벨을 폭 0으로 접어두고, 호버하면 펼치면서 셰브론을 옆으로 밀어낸다 */
+  .lib-link .lib-label {
+    font-family: "Zilla Slab", serif; font-weight: 600; font-size: 15px; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; max-width: 0;
+    transition: max-width .42s cubic-bezier(.4, 0, .2, 1),
+                margin-left .42s cubic-bezier(.4, 0, .2, 1);
+  }
+  .lib-link:hover, .lib-link:focus-visible { background: var(--chair-accent); border-color: var(--chair-accent); color: #fff; }
+  .lib-link:hover .lib-arrow, .lib-link:focus-visible .lib-arrow { opacity: 1; }
+  /* LABEL_W 는 라벨 실제 폭. 버튼이 다 늘어나는 순간 글자도 마지막 글자까지 드러난다 */
+  .lib-link:hover .lib-label, .lib-link:focus-visible .lib-label {
+    max-width: 94px; margin-left: 3px;   /* 라벨 실제 폭 87px + 폰트 폴백 여유 */
+    transition: max-width .58s cubic-bezier(.25, .8, .35, 1),
+                margin-left .58s cubic-bezier(.25, .8, .35, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lib-link, .lib-link .lib-label, .lib-link .lib-arrow { transition: none; }
+  }
+  .hdr-search { flex: 1; max-width: 380px; position: relative; }
+  .hdr-search input {
+    width: 100%; height: var(--ctl-h); padding: 0 12px 0 30px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px; font-family: "IBM Plex Sans KR", sans-serif; background: var(--bg); color: var(--ink);
+  }
+  .hdr-search input:focus { outline: none; border-color: var(--accent); }
+  .hdr-search .ico { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); pointer-events: none; }
+  .hdr-stats { display: flex; gap: 22px; margin-left: auto; }
+  .hdr-stat { text-align: right; }
+  .hdr-stat .n { font-family: "IBM Plex Mono", monospace; font-size: 1.15rem; font-weight: 600; display: block; line-height: 1.1; }
+  .hdr-stat .l { font-size: 9.5px; color: var(--muted); letter-spacing: 0.04em; }
+
+  /* ---- Layout ---- */
+  .layout { flex: 1; display: flex; overflow: hidden; }
+
+  /* ---- Sidebar ---- */
+  .sidebar { width: 210px; flex-shrink: 0; background: var(--paper); border-right: 1px solid var(--line); overflow-y: auto; scrollbar-gutter: stable; padding: 16px 0; }
+  .sb-sec { padding: 0 16px; margin-bottom: 20px; }
+  .sb-lbl { font-family: "IBM Plex Sans KR", sans-serif; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; }
+  .fb {
+    display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 9px; border: none; border-radius: 6px;
+    font-size: 12.5px; font-family: "IBM Plex Sans KR", sans-serif; background: transparent; color: var(--ink-soft); cursor: pointer; margin-bottom: 1px; gap: 6px;
+  }
+  .fb:hover { background: var(--bg); }
+  .fb.on { background: var(--ink); color: var(--paper); font-weight: 600; }
+  #brandAllBtn.on, #brandList .fb.on { background: var(--brand-accent); color: #fff; }
+  #brandAllBtn.on .cnt, #brandList .fb.on .cnt { color: #fff; opacity: 0.85; }
+  .fb .cnt { margin-left: auto; font-size: 10px; opacity: 0.6; font-family: "IBM Plex Mono", monospace; }
+  .fb-cont {
+    display: flex; align-items: center; gap: 5px; width: 100%; text-align: left; border: none; background: transparent;
+    cursor: pointer; padding: 10px 9px 4px; margin-top: 6px;
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .fb-cont:first-child { margin-top: 0; }
+  .fb-cont:hover { color: var(--ink-soft); }
+  .fb-cont.on { color: var(--accent); }
+  .fb-cont .cnt { margin-left: auto; font-family: "IBM Plex Mono", monospace; opacity: 0.8; }
+  .fb .chev, .fb-cont .chev { font-size: 9px; width: 10px; flex-shrink: 0; }
+  .fb-sub { padding-left: 18px; }
+  .sb-div { border: none; border-top: 1px solid var(--line); margin: 0 16px 16px; }
+
+  /* ---- Main grid ---- */
+  .main { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* ---- Scrollbars ---- */
+  .sidebar, .main, .detail { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+  .sidebar::-webkit-scrollbar, .main::-webkit-scrollbar, .detail::-webkit-scrollbar { width: 9px; height: 9px; }
+  .sidebar::-webkit-scrollbar-track, .main::-webkit-scrollbar-track, .detail::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb, .main::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb {
+    background: var(--line); border-radius: 5px; border: 2px solid var(--bg);
+  }
+  .sidebar::-webkit-scrollbar-thumb:hover, .main::-webkit-scrollbar-thumb:hover, .detail::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  .grid-meta { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+  /* ---- Brand info bar ---- */
+  .brand-info {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 14px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 24px; margin-bottom: 18px;
+  }
+  .brand-info .bi-logo-wrap {
+    flex-shrink: 0; width: 190px; height: 76px; border-radius: 9px; background: #fff;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 4px;
+  }
+  .brand-info .bi-logo-wrap img { width: 92%; height: 80%; object-fit: contain; display: block; }
+  .brand-info .bi-body { flex: 1; min-width: 0; width: 100%; max-width: 860px; }
+  .brand-info .bi-name { font-family: "Zilla Slab", serif; font-weight: 700; font-size: 1.2rem; margin: 0 0 6px; }
+  .brand-info .bi-summary { font-size: 12.8px; line-height: 1.65; color: var(--ink-soft); margin: 0 0 10px; }
+  .brand-info .bi-facts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .brand-info .bi-fact { font-size: 11.5px; color: var(--ink-soft); }
+  .brand-info .bi-fact b { font-family: "IBM Plex Mono", monospace; font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px; font-weight: 600; }
+  .bi-actions { display: flex; align-items: center; gap: 14px; }
+  .bi-detail-btn {
+    font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: none;
+    border-radius: 7px; padding: 7px 14px; cursor: pointer;
+  }
+  .bi-detail-btn:hover { background: var(--tag-bg); }
+  .bi-source-link { font-size: 11.5px; color: var(--muted); text-decoration: underline; }
+  .bi-source-link:hover { color: var(--ink-soft); }
+  .bi-home-btn {
+    font-size: 12px; font-weight: 600; color: var(--ink-soft); background: none; border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    white-space: nowrap;
+  }
+  .bi-home-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .bi-logo-row { display: flex; flex-direction: column; align-items: stretch; gap: 8px; flex-shrink: 0; }
+  .bi-logo-row .bi-home-btn { justify-content: center; }
+
+  /* ---- Brand detail (Confluence content) view ---- */
+  .brand-doc { max-width: 860px; margin: 0; padding-left: 25px; }
+  .brand-doc-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .brand-doc-back {
+    font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 7px; padding: 7px 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .brand-doc-back:hover { background: var(--bg); }
+  .brand-doc-body {
+    font-size: 13.5px; line-height: 1.75; color: var(--ink-soft);
+  }
+  .brand-doc-body h3 { font-family: "Zilla Slab", serif; color: var(--accent); font-size: 1.05rem; margin: 26px 0 12px; }
+  .brand-doc-body h3:first-child { margin-top: 0; }
+  .brand-doc-body p { margin: 0 0 12px; }
+  .brand-doc-body strong { color: var(--ink); }
+  .brand-doc-body ul { margin: 0 0 14px; padding-left: 20px; }
+  .brand-doc-body li { margin-bottom: 5px; }
+  .brand-doc-body hr { border: none; border-top: 1px solid var(--line); margin: 22px 0; }
+  .brand-doc-body a { color: var(--accent); }
+  .brand-doc-body figure { display: none; }
+  .brand-doc-body .bd-img { margin: 10px 0 18px; }
+  .brand-doc-body .bd-img img { max-width: 300px; width: 100%; display: block; border-radius: 8px; background: #ddd7c9; }
+  .masonry { column-count: 4; column-gap: 16px; }
+  @media (max-width: 1500px) { .masonry { column-count: 3; } }
+  @media (max-width: 1100px) { .masonry { column-count: 2; } }
+  @media (max-width: 720px) { .masonry { column-count: 2; column-gap: 10px; } }
+  @media (max-width: 380px) { .masonry { column-count: 2; column-gap: 8px; } }
+
+  .card {
+    break-inside: avoid; margin-bottom: 16px; background: var(--paper);
+    border: 1.5px solid transparent; border-radius: 10px; overflow: hidden;
+    cursor: pointer; transition: border-color .15s, box-shadow .15s;
+  }
+  .card:hover { box-shadow: 0 8px 20px rgba(36,31,25,0.1); }
+  .card.sel { border-color: var(--ink); }
+  .card .imgwrap { position: relative; background: #ddd7c9; }
+  .card img.pimg { width: 100%; display: block; }
+  .card .logochip {
+    position: absolute; left: 9px; top: 9px; background: rgba(246,243,236,0.92);
+    border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; height: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;
+  }
+  .card .logochip:hover { background: rgba(255,255,255,0.98); box-shadow: 0 1px 5px rgba(0,0,0,0.28); }
+  .card .logochip img { max-height: 14px; max-width: 70px; display: block; }
+  .card .logochip[data-brand="ki"] { height: 26px; padding: 3px 8px; }
+  .card .logochip[data-brand="ki"] img { max-height: 20px; max-width: 84px; }
+  .card .logochip[data-brand="sitzone"] { height: 28px; padding: 3px 8px; }
+  .card .logochip[data-brand="sitzone"] img { max-height: 22px; max-width: 84px; }
+  .card .logochip[data-brand="sidiz"] { height: 26px; padding: 3px 8px; }
+  .card .logochip[data-brand="sidiz"] img { max-height: 20px; max-width: 84px; }
+  .card .logochip[data-brand="livart"] { height: 24px; padding: 3px 8px; }
+  .card .logochip[data-brand="livart"] img { max-height: 18px; max-width: 84px; }
+  .card .logochip.textonly { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+  .copy-btn {
+    position: absolute; top: 9px; right: 9px; width: 26px; height: 26px; border-radius: 7px; border: none;
+    background: rgba(36,31,25,0.55); color: #fff; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s, background .15s; z-index: 2;
+  }
+  .imgwrap:hover .copy-btn, .det-img:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { background: rgba(36,31,25,0.85); }
+  .copy-btn.copied { opacity: 1; background: #4a7a52; }
+  .copy-btn svg { width: 13px; height: 13px; display: block; }
+  .card .body { padding: 12px 14px 13px; }
+  .card .pname { font-family: "Zilla Slab", serif; font-weight: 600; font-size: 1rem; margin: 0 0 3px; text-wrap: balance; }
+  .card .brandname { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .tag { font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: 0.02em; padding: 2px 7px; border-radius: 3px; background: var(--tag-bg); color: var(--tag-ink); }
+  .tag.cont-north-america { background: var(--na-bg); color: var(--na); }
+  .tag.cont-europe { background: var(--eu-bg); color: var(--eu); }
+  .tag.cont-asia { background: var(--as-bg); color: var(--as); }
+  .tag.cont-oceania { background: var(--oc-bg); color: var(--oc); }
+  .card .price { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .state { text-align: center; padding: 70px 20px; color: var(--muted); }
+  .state .ico { font-size: 32px; margin-bottom: 10px; }
+
+  /* ---- Detail panel (persistent, right side) ---- */
+  .detail { width: 360px; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; display: flex; flex-direction: column; }
+  .detail.hide { display: none; }
+  .det-hdr { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 10px; }
+  .det-hdr-info { flex: 1; min-width: 0; }
+  .det-brand-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .det-brand-row:hover .det-brand { text-decoration: underline; }
+  .det-logo { max-height: 15px; max-width: 90px; }
+  .det-logo[data-brand="ki"] { max-height: 22px; }
+  .det-logo[data-brand="sitzone"] { max-height: 24px; }
+  .det-logo[data-brand="sidiz"] { max-height: 22px; }
+  .det-logo[data-brand="livart"] { max-height: 20px; }
+  .det-brand { font-size: 11.5px; color: var(--muted); }
+  .det-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; flex-shrink: 0; padding: 2px; }
+  .det-close:hover { color: var(--ink); }
+  .det-img { position: relative; background: #ddd7c9; flex-shrink: 0; overflow: hidden; cursor: zoom-in; }
+  .det-img img { width: 100%; height: auto; display: block; }
+  .gal-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: rgba(36,31,25,0.5); color: #fff; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s, background .15s; z-index: 3;
+  }
+  .gal-arrow:hover { background: rgba(36,31,25,0.8); }
+  .det-img:hover .gal-arrow { opacity: 1; }
+  .gal-arrow.prev { left: 8px; }
+  .gal-arrow.next { right: 8px; }
+  .gal-dots { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 10px 0; background: var(--panel); }
+  .gal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); border: none; cursor: pointer; padding: 0; }
+  .gal-dot.on { background: var(--ink); width: 7px; height: 7px; }
+  .det-body { padding: 18px; flex: 1; }
+  .det-name { font-family: "Zilla Slab", serif; font-size: 1.4rem; font-weight: 600; margin: 0 0 10px; text-wrap: balance; }
+  .det-desc { color: var(--ink-soft); line-height: 1.6; margin-bottom: 16px; font-size: 13px; }
+  .det-props { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+  .det-row { display: flex; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .det-key { font-size: 11px; color: var(--muted); width: 76px; flex-shrink: 0; padding-top: 1px; font-family: "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: 0.03em; }
+  .det-val { font-size: 13px; color: var(--ink); flex: 1; line-height: 1.5; }
+  .det-acts { padding: 16px 18px; border-top: 1px solid var(--line); flex-shrink: 0; }
+  .det-link { display: block; text-align: center; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); padding: 11px 18px; border-radius: 7px; text-decoration: none; }
+  .det-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; color: var(--muted); padding: 30px; text-align: center; }
+  .det-empty .ico { font-size: 28px; margin-bottom: 10px; }
+
+  /* ---- Lightbox ---- */
+  .lightbox-bg { position: fixed; inset: 0; background: rgba(20,17,13,0.9); display: none; align-items: center; justify-content: center; z-index: 300; cursor: zoom-out; }
+  .lightbox-bg.open { display: flex; }
+  .lightbox-inner { display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 90vw; }
+  .lightbox-bg img { max-width: 88vw; max-height: 74vh; object-fit: contain; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  .lightbox-close { position: fixed; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 26px; cursor: pointer; opacity: 0.85; z-index: 301; }
+  .lightbox-close:hover { opacity: 1; }
+  .lightbox-nav { background: rgba(255,255,255,0.12); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+  .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+  .lightbox-row { display: flex; align-items: center; gap: 18px; }
+  .lightbox-copy { width: 36px; height: 36px; border-radius: 8px; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lightbox-copy:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-copy.copied { background: #4a7a52; }
+  .lightbox-copy svg { width: 15px; height: 15px; }
+
+  /* ---- Mobile ---- */
+  .hdr-menu-btn { display: none; }
+  .sidebar-backdrop { display: none; }
+  @media (max-width: 860px) {
+    .hdr { padding: 0 8px; gap: 4px; height: 52px; }
+    .hdr-menu-btn { display: flex; }
+    .hdr-brand { gap: 0; }
+    .hdr-brand .icon-btn { width: 30px; height: 30px; }
+    .hdr-search { max-width: none; }
+    .hdr-search input { padding: 8px 8px 8px 26px; }
+    .hdr-stats { gap: 12px; }
+    .hdr-stat .n { font-size: 0.95rem; }
+    .hdr-stat .l { font-size: 8px; }
+
+    /* touch devices have no :hover, so these controls must stay visible instead of only appearing on hover */
+    .copy-btn, .gal-arrow { opacity: 1; }
+
+    .sidebar {
+      position: fixed; top: 52px; bottom: 0; left: -84%; width: 84%; max-width: 300px;
+      z-index: 250; transition: left .22s ease; box-shadow: 3px 0 24px rgba(0,0,0,0.2);
+    }
+    .sidebar.open { left: 0; }
+    .sidebar-backdrop.show {
+      display: block; position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
+      background: rgba(20,17,13,0.4); z-index: 240;
+    }
+
+    .main { padding: 14px 12px; }
+    .card .body { padding: 9px 10px 10px; }
+    .card .pname { font-size: 0.88rem; }
+    .card .brandname { font-size: 10px; margin-bottom: 6px; }
+    .tag { font-size: 8.5px; padding: 2px 5px; }
+    .card .price { font-size: 11px; }
+    .card .logochip { padding: 3px 6px; height: 17px; left: 7px; top: 7px; }
+    .card .logochip img { max-height: 11px; max-width: 56px; }
+    .copy-btn { width: 22px; height: 22px; top: 7px; right: 7px; }
+    .copy-btn svg { width: 11px; height: 11px; }
+    .brand-info { flex-direction: column; padding: 16px; }
+    .brand-info .bi-logo-wrap { width: 140px; height: 56px; }
+    .bi-logo-row { flex-direction: row; align-items: center; }
+
+    .detail {
+      position: fixed; top: 52px; left: 0; right: 0; bottom: 0; width: 100%;
+      z-index: 260; border-left: none;
+    }
+    .det-name { font-size: 1.2rem; }
+    .lightbox-close { top: 12px; right: 12px; }
+  }
+  @media (max-width: 480px) {
+    .hdr-stats { display: none; }
+    .hdr-search { flex: 1; }
+  }
+</style>
+
+<div class="hdr">
+  <div class="hdr-brand">
+    <button class="icon-btn hdr-menu-btn" id="btnMenu" onclick="toggleSidebar()" title="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <span class="hdr-title" onclick="goHome()" title="홈" style="cursor:pointer">Sofa Library</span>
+    <button class="icon-btn" id="btnBack" onclick="goBack()" title="뒤로가기" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M20 4 L4 12 L20 20 Z"/></svg></button>
+    <button class="icon-btn" id="btnForward" onclick="goForward()" title="앞으로 가기" disabled style="margin-left:-6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 4 L20 12 L4 20 Z"/></svg></button>
+  </div>
+  <div class="hdr-search">
+    <span class="ico">&#8981;</span>
+    <input type="search" id="searchInp" placeholder="제품명, 브랜드 검색...">
+  </div>
+  <a class="lib-link" href="https://jaeyoungkim-jay.github.io/chair-market-watch-images/chair-library.html" target="_blank" rel="noopener" title="Chair Library 열기">
+    <svg class="lib-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"/><rect x="5" y="12" width="14" height="3.5" rx="1.2"/><path d="M12 15.5V20"/><path d="M6.5 20h11"/></svg>
+    <span class="lib-label">Chair Library</span>
+    <svg class="lib-arrow" viewBox="0 0 12 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4 9.5 12l-7 8"/></svg>
+  </a>
+  <div class="hdr-stats">
+    <div class="hdr-stat"><span class="n" id="brandCount"></span><span class="l">BRANDS</span></div>
+    <div class="hdr-stat"><span class="n" id="productCount"></span><span class="l">PRODUCTS</span></div>
+  </div>
+</div>
+
+<div class="lightbox-bg" id="lightboxBg" onclick="if(event.target===this) closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <div class="lightbox-inner">
+    <div class="lightbox-row">
+      <button class="lightbox-nav" id="lbPrev" onclick="lbStep(-1)" style="display:none">&#8249;</button>
+      <img id="lightboxImg" src="" alt="">
+      <button class="lightbox-nav" id="lbNext" onclick="lbStep(1)" style="display:none">&#8250;</button>
+    </div>
+    <button class="lightbox-copy" id="lbCopy" onclick="copyImage(lbImages[lbIndex], this)" title="이미지 복사">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M4 16V4a2 2 0 0 1 2-2h10"></path></svg>
+    </button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-sec">
+      <div class="sb-lbl">Year</div>
+      <button class="fb-cont" id="yearAllBtn"></button>
+      <div id="yearList"></div>
+    </div>
+    <hr class="sb-div">
+    <div class="sb-sec">
+      <div class="sb-lbl">Brand</div>
+      <button class="fb on" id="brandAllBtn">All</button>
+      <div id="brandList"></div>
+    </div>
+    <hr class="sb-div">
+    <div class="sb-sec">
+      <div class="sb-lbl">Category</div>
+      <button class="fb on" id="catAllBtn">All <span class="cnt" id="cnt-cat-all"></span></button>
+      <div id="catList"></div>
+    </div>
+    <hr class="sb-div">
+    <div class="sb-sec">
+      <div class="sb-lbl">Type</div>
+      <button class="fb on" id="typeAllBtn">All <span class="cnt" id="cnt-type-all"></span></button>
+      <div id="typeList"></div>
+    </div>
+    <hr class="sb-div">
+    <div class="sb-sec">
+      <div class="sb-lbl">Config</div>
+      <button class="fb on" id="configAllBtn">All <span class="cnt" id="cnt-config-all"></span></button>
+      <div id="configList"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="brandInfoWrap"></div>
+    <div id="mainGridView">
+      <div class="grid-meta" id="gridMeta"></div>
+      <div class="masonry" id="grid"></div>
+    </div>
+    <div id="brandDocView" style="display:none"></div>
+  </main>
+
+  <aside class="detail hide" id="detail">
+    <div class="det-empty" id="detEmpty">
+      <div class="ico">&#129681;</div>
+      <p>카드를 선택하면<br>여기에 상세 정보가 표시됩니다.</p>
+    </div>
+    <div id="detFilled" style="display:none; flex-direction:column; height:100%">
+      <div class="det-hdr">
+        <div class="det-hdr-info">
+          <div class="det-brand-row" id="dBrandRow" style="cursor:pointer">
+            <img class="det-logo" id="dLogo" src="" alt="" style="display:none">
+            <span class="det-brand" id="dBrand"></span>
+          </div>
+        </div>
+        <button class="det-close" onclick="closeDetail()">&times;</button>
+      </div>
+      <div class="det-img" id="dImgWrap" onclick="openLightbox()">
+        <img id="dImg" src="" alt="">
+        <button class="copy-btn" id="dCopyBtn" title="이미지 복사" onclick="event.stopPropagation(); copyImage(selected.images[detIndex], this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M4 16V4a2 2 0 0 1 2-2h10"></path></svg>
+        </button>
+        <button class="gal-arrow prev" id="dPrev" onclick="event.stopPropagation(); detStep(-1)" style="display:none">&#8249;</button>
+        <button class="gal-arrow next" id="dNext" onclick="event.stopPropagation(); detStep(1)" style="display:none">&#8250;</button>
+      </div>
+      <div class="gal-dots" id="dDots"></div>
+      <div class="det-body">
+        <p class="det-name" id="dName"></p>
+        <p class="det-desc" id="dDesc"></p>
+        <div class="det-props">
+          <div class="det-row" id="dPriceRow"><span class="det-key">Price</span><span class="det-val" id="dPrice"></span></div>
+          <div class="det-row"><span class="det-key">Year</span><span class="det-val" id="dYear"></span></div>
+          <div class="det-row"><span class="det-key">Category</span><span class="det-val" id="dCategory"></span></div>
+          <div class="det-row"><span class="det-key">Type</span><span class="det-val" id="dType"></span></div>
+          <div class="det-row"><span class="det-key">Material</span><span class="det-val" id="dMaterial"></span></div>
+          <div class="det-row"><span class="det-key">Config</span><span class="det-val" id="dConfig"></span></div>
+          <div class="det-row"><span class="det-key">Designer</span><span class="det-val" id="dDesigner"></span></div>
+        </div>
+      </div>
+      <div class="det-acts">
+        <a class="det-link" id="dLink" href="#" target="_blank" rel="noopener">제품 페이지 보기</a>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const DATA = [{"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Alcove", "desc": "높은 패널로 오픈 공간 안에 '방 안의 방'을 만드는 라운지 소파. Plus·Work·Highback 등 파생형 다수", "price": "", "year": "2006", "year_bucket": "2005-2009", "category": "Booth", "config": "Modular", "type": "Fabric", "material": "Steel frame, Polyurethane foam, Fabric", "designer": "Ronan & Erwan Bouroullec", "url": "https://www.vitra.com/en-un/product/alcove", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_alcove.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Soft Work", "desc": "전원·태블릿 거치대를 통합해 소파 위에서 일하도록 만든 오피스 소파 시스템", "price": "", "year": "2018", "year_bucket": "2018", "category": "Modular", "config": "Modular", "type": "Fabric", "material": "Steel frame, Foam, Fabric", "designer": "Edward Barber & Jay Osgerby", "url": "https://www.vitra.com/en-un/product/soft-work", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_softwork.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Anagram Club", "desc": "컨트랙트 공간을 위한 모듈 소파. 암체어·코너·플랫폼 테이블로 조합", "price": "", "year": "2026", "year_bucket": "2026", "category": "Modular", "config": "Modular", "type": "Fabric", "material": "Foam, Fabric (탈착식 커버)", "designer": "Panter&Tourron", "url": "https://www.vitra.com/en-un/product/details/anagram-club-corner", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_anagramclub.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Anagram Sofa", "desc": "커버를 사용자가 직접 벗겨 세탁·교체할 수 있는 모듈 소파. 2인·3인·셰이즈·코너 구성", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "Modular", "type": "Fabric", "material": "Foam, Fabric (사용자 탈착 가능 커버)", "designer": "Panter&Tourron", "url": "https://www.vitra.com/en-un/product/details/anagram-sofa", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_anagram.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Slow Sofa", "desc": "둥근 볼륨과 깊은 시트로 느긋한 자세를 유도하는 리빙 소파", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "3-Seat", "type": "Fabric", "material": "Foam, Fabric", "designer": "Ronan & Erwan Bouroullec", "url": "https://www.vitra.com/en-un/product/details/slow-sofa", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_slow.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Suita", "desc": "브리지형 알루미늄 다리 위에 볼륨이 떠 있는 소파 시스템. 쿠션 타입(클래식·포인티드·터프티드) 선택", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "Modular", "type": "Fabric", "material": "Tubular steel frame, Moulded PU foam, Aluminium legs", "designer": "Antonio Citterio", "url": "https://www.vitra.com/en-un/product/suita", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_suita.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Soft Modular Sofa", "desc": "낮고 수평적인 비례의 모듈 소파. 단단한 쿠션과 장식 없는 형태", "price": "", "year": "2016", "year_bucket": "2016", "category": "Living", "config": "Modular", "type": "Fabric", "material": "Foam, Fabric", "designer": "Jasper Morrison", "url": "https://www.vitra.com/en-un/product/soft-modular-sofa", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_softmodular.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Mariposa Sofa", "desc": "등받이 각도를 조절할 수 있는 라운지 소파. 2인·2.5인·3인·코너·오토만", "price": "", "year": "2014", "year_bucket": "2014", "category": "Lounge", "config": "3-Seat", "type": "Fabric", "material": "Foam, Fabric", "designer": "Edward Barber & Jay Osgerby", "url": "https://www.vitra.com/en-un/product/mariposa-sofa", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_mariposa.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Grand Sofà", "desc": "넉넉한 볼륨과 깊은 좌면의 프리미엄 리빙 소파", "price": "", "year": "2017", "year_bucket": "2017", "category": "Living", "config": "3-Seat", "type": "Leather", "material": "Foam, Leather / Fabric", "designer": "Antonio Citterio", "url": "https://www.vitra.com/en-un/product/grand-sofa", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_grandsofa.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Polder", "desc": "비대칭 좌면과 색·소재 조합이 특징인 리빙 소파", "price": "", "year": "2005", "year_bucket": "2005-2009", "category": "Living", "config": "3-Seat", "type": "Fabric", "material": "Foam, Fabric, 목재 다리", "designer": "Hella Jongerius", "url": "https://www.vitra.com/en-un/product/polder", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_polder.jpg"]}, {"domain": "sofa", "brand_id": "vitra", "brand": "Vitra", "continent": "europe", "homepage": "https://www.vitra.com/", "news_url": "https://www.vitra.com/en-un/about/press", "logo": "", "name": "Freeform Sofa", "desc": "노구치의 조각적 형태를 그대로 옮긴 곡선형 소파. 오토만과 한 쌍", "price": "", "year": "1946", "year_bucket": "1940s", "category": "Living", "config": "2-Seat", "type": "Fabric", "material": "Foam, Fabric", "designer": "Isamu Noguchi", "url": "https://www.vitra.com/en-un/product/details/freeform-sofaottoman", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/vitra_freeform.jpg"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Paso Doble", "desc": "휴식을 공간의 연출 요소로 다룬 신작 시팅 시스템", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Nicola Pavan", "url": "https://sabaitalia.com/en/products/paso-doble-p40662", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_pasodoble.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Up-grade", "desc": "2008년 Up의 리스타일. 단단한 볼륨감이 특징인 브랜드 상징 모델", "price": "", "year": "2008", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Giuseppe Viganò", "url": "https://sabaitalia.com/en/products/up-p40250", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_upgrade.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Land", "desc": "메탈 프레임 위에 패딩 베이스를 올려 감싸는 느낌을 만든 소파", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/land-p34193", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_land.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Limes", "desc": "베이스 사방에 등판을 붙였다 뗄 수 있는 모듈 소파", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/limes-p33640", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_limes.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Simposio", "desc": "곡선으로 조각한 단순한 형태의 소파", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Studiopepe", "url": "https://sabaitalia.com/en/products/simposio-p21880", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_simposio.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Vela Piping", "desc": "파이핑 디테일을 더한 Vela 파생형. 요소가 많아 조합 폭이 넓다", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Zanellato/Bortotto", "url": "https://sabaitalia.com/en/products/vela-piping-p21882", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_velapiping.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Ananta", "desc": "공간 안에서 쉽게 옮기고 다시 구성하도록 만든 시팅 시스템", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/ananta-p20773", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_ananta.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Metis", "desc": "유기적으로 변형되는 소파 계열. 그리스어 '실용적 지혜'에서 따온 이름", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Nicola Pavan", "url": "https://sabaitalia.com/en/products/metis-p8926", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_metis.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Vela", "desc": "바람에 부푼 돛에서 형태를 따온 소파", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Zanellato/Bortotto", "url": "https://sabaitalia.com/en/products/vela-p10078", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_vela.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Gala", "desc": "1970년대 레트로 퓨처 무드. 앞뒤 동일한 등판과 두 가지 좌판 깊이로 구성이 자유롭다", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Cristina Celestino", "url": "https://sabaitalia.com/en/products/gala-p2031", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_gala.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Oltremare", "desc": "패션 디자이너 안토니오 마라스와 협업한 시팅 컬렉션", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Antonio Marras", "url": "https://sabaitalia.com/en/products/oltremare-p436", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_oltremare.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Pixel Light", "desc": "Pixel의 가벼운 버전. 공간의 유동성에 맞춘 시팅 시스템", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/pixel-light-p1841", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_pixellight.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Pixel", "desc": "전용 커넥터로 팔·등·좌판을 분리·조합하는 브랜드 대표 모듈 소파", "price": "€7,709 (3모듈)", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "Modular", "type": "Fabric", "material": "거위 깃털+폴리우레탄 폼 좌쿠션, 면 100% 커버", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/pixel-p24", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_pixel.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "New York Suite", "desc": "퀼팅 쿠션의 레트로 무드와 슬림 프레임의 대비. 국내에서 '강민경 소파'로 알려짐", "price": "€6,856 (3인)", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "3-Seat", "type": "Fabric", "material": "폴리우레탄 폼+폴리에스터 화이버, 면 100% 커버", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/new-york-suite-p154", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_newyorksuite.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "My Taos", "desc": "브랜드 정체성을 가장 잘 보여주는 모델. 유연한 흐름의 형태", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/my-taos-p1721", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_mytaos.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Avant-Après", "desc": "팔걸이·등받이를 떼어낼 수 있는 구조로 구성이 자유로운 소파", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/avant-apres-p86", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_avantapres.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Essentiel", "desc": "군더더기 없는 형태와 편안한 인체공학. 이탈리아와 북유럽 감각의 절충", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/essentiel-p515", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_essentiel.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Rendez-vous", "desc": "주거뿐 아니라 퍼블릭 공간까지 고려한 시팅 시스템. 적은 요소로 구성 폭을 넓혔다", "price": "", "year": "", "year_bucket": "unknown", "category": "Lounge", "config": "Modular", "type": "Fabric", "material": "블랙 도장 메탈 구조", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/rendez-vous-p1231", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_rendezvous.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Livingston", "desc": "헤드레스트를 돌리면 등받이가 되는 구조", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Giuseppe Viganò", "url": "https://sabaitalia.com/en/products/livingston-p1335", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_livingston.webp"]}, {"domain": "sofa", "brand_id": "saba", "brand": "Saba Italia", "continent": "europe", "homepage": "https://sabaitalia.com/", "news_url": "https://sabaitalia.com/en/press-news", "logo": "", "name": "Karma", "desc": "모던과 클래식 공간 모두에 어울리는 스테디셀러", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Sergio Bicego", "url": "https://sabaitalia.com/en/products/karma-p113", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/saba_karma.webp"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Untitled", "desc": "원목 구조가 정체성을 만드는 시팅 시스템. 일자형·모듈·암체어 구성", "price": "", "year": "2026", "year_bucket": "2026", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Vincent Van Duysen", "url": "https://www.bebitalia.com/en-us/en-untitled-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_untitled.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Cocùn", "desc": "감싸 안는 형태의 모듈 소파. 군도처럼 이어지는 구성", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-cocun-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_cocun.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Tufty-Time 20", "desc": "2005년 Tufty-Time 출시 20년을 맞아 재해석한 버전", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://www.bebitalia.com/en-us/en-tufty-time-20-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_tuftytime20.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Charles", "desc": "역 L자 알루미늄 다이캐스팅 다리로 가벼운 인상을 만든 브랜드 아이콘", "price": "", "year": "1997", "year_bucket": "1990s", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-us-charles-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_charles.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Charles Carré", "desc": "Charles에 체크 퀼팅 패턴을 입힌 버전", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-charles-carre-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_charlescarre.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Charles Large", "desc": "누울 수 있을 만큼 넉넉한 Charles의 대형 모듈 버전", "price": "", "year": "2003", "year_bucket": "2000-2004", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-charles-large-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_charleslarge.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Charles Large Carré", "desc": "Charles Large에 체크 퀼팅 패턴을 입힌 버전", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-charles-large-carre-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_charleslargecarre.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Diesis", "desc": "현대 가구사의 아이콘. 기술과 장인 공정을 결합한 초기 대표작", "price": "", "year": "1979", "year_bucket": "1970s", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Antonio Citterio & Paolo Nava", "url": "https://www.bebitalia.com/en-us/en-diesis-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_diesis.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Dambodue", "desc": "Dambo의 확장판. 등·팔걸이 볼륨을 키우고 좌면을 바닥에 가깝게", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Piero Lissoni", "url": "https://www.bebitalia.com/en-us/en-dambodue-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_dambodue.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Camaleonda x Stella McCartney", "desc": "스텔라 매카트니의 S-Wave 모노그램 패브릭을 적용한 Camaleonda 스페셜 에디션", "price": "", "year": "2023", "year_bucket": "2023", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Mario Bellini", "url": "https://www.bebitalia.com/en-us/en-camaleonda-divani-mccartney.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_camaleondasmc.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Dambo", "desc": "불규칙 오각형과 사각 모듈을 조합하는 시스템", "price": "", "year": "2023", "year_bucket": "2023", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Piero Lissoni", "url": "https://www.bebitalia.com/en-us/en-dambo-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_dambo.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Tortello", "desc": "이름 그대로 통통하고 부드러운 단일 덩어리 형태의 소파", "price": "", "year": "2023", "year_bucket": "2023", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Edward Barber & Jay Osgerby", "url": "https://www.bebitalia.com/en-us/en-tortello-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_tortello.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Le Bambole x Stella McCartney", "desc": "스텔라 매카트니의 'Fungi Forest' 프린트를 적용한 캡슐 컬렉션(암체어·2인·3인)", "price": "", "year": "2022", "year_bucket": "2022", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Mario Bellini", "url": "https://www.bebitalia.com/en-us/en-le-bambole-divani-mccartney.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_lebambolesmc.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Le Bambole", "desc": "1972년 원작의 재생산. 1979년 황금콤파스상 수상작", "price": "", "year": "2022", "year_bucket": "2022", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Mario Bellini", "url": "https://www.bebitalia.com/en-us/en-le-bambole-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_lebambole.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Noonu", "desc": "몰디브의 환초에서 이름을 딴 소파 시스템", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-us-noonu-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_noonu.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Camaleonda", "desc": "1970년 원작의 재생산. 90×90 좌모듈을 고리로 연결·분리해 자유롭게 구성", "price": "", "year": "2020", "year_bucket": "2020", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Mario Bellini", "url": "https://www.bebitalia.com/en-us/en-us-camaleonda-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_camaleonda.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Naviglio", "desc": "곡선·직선·엔드 요소와 셰이즈롱, 오토만으로 구성되는 컬렉션", "price": "", "year": "2020", "year_bucket": "2020", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Yabu Pushelberg", "url": "https://www.bebitalia.com/en-us/en-naviglio-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_naviglio.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "B&B Atoll", "desc": "산호초에서 이름을 딴 모듈 시스템. 세 가지 기본 플랫폼 위에 구성", "price": "", "year": "2018", "year_bucket": "2018", "category": "Living", "config": "Modular", "type": "Leather", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-b-b-atoll-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_bbatoll.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Tufty-Time", "desc": "오토만을 기본 단위로 확장하는 모듈 시스템. 커버 탈착 가능", "price": "", "year": "2005", "year_bucket": "2005-2009", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://www.bebitalia.com/en-us/en-us-tufty-time-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_tuftytime.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Ray", "desc": "직선·셰이즈롱·엔드 요소로 코너와 페닌슐라까지 구성하는 모듈 시스템", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-ray-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_ray.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Bend-Sofa", "desc": "3D 모델링 연구에서 나온 물결 형태의 모듈 소파", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://www.bebitalia.com/en-us/en-bend-sofa-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_bendsofa.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Richard", "desc": "두 가지 깊이의 요소로 구성하는 시팅 시스템", "price": "", "year": "2016", "year_bucket": "2016", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-richard-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_richard.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Michel", "desc": "장식 없이 단순하고 선적인 형태의 시팅 시스템", "price": "", "year": "2012", "year_bucket": "2012", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-michel-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_michel.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Husk-Sofa", "desc": "부드러운 부분이 구조 역할을 하도록 제작 순서를 뒤집은 소파. 깊은 좌면, 2가지 사이즈", "price": "", "year": "2014", "year_bucket": "2014", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://www.bebitalia.com/en-us/en-husk-sofa-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_husksofa.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "AC Lounge", "desc": "Maxalto 컬렉션의 클래시시즘을 대표하는 컨트랙트용 라운지 소파", "price": "", "year": "2009", "year_bucket": "2005-2009", "category": "Lounge", "config": "", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-ac-lounge-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_aclounge.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Andy '13", "desc": "등받이 각도를 수평까지 눕힐 수 있는 메커니즘 탑재", "price": "", "year": "2013", "year_bucket": "2013", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Paolo Piva", "url": "https://www.bebitalia.com/en-us/en-andy-13-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_andy13.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Arne", "desc": "사용자를 감싸는 곡선 형태. 대화와 시청을 위한 거실 소파", "price": "", "year": "2005", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-arne-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_arne.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Saké", "desc": "공중에 뜬 양탄자 같은 플랫폼 위에 쿠션을 올린 시팅 시스템", "price": "", "year": "2017", "year_bucket": "2017", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Piero Lissoni", "url": "https://www.bebitalia.com/en-us/en-sake-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_sake.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "B&B Atoll Soft", "desc": "B&B Atoll의 부드러운 형태·쿠션 버전", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-b-b-atoll-soft-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_bbatollsoft.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Coronado", "desc": "등 구조에 하모닉 스틸 밴드 서스펜션을 넣은 브랜드 초창기 스테디셀러", "price": "", "year": "1966", "year_bucket": "1960s", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Afra & Tobia Scarpa", "url": "https://www.bebitalia.com/en-us/en-coronado-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_coronado.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Dock", "desc": "좌고 41cm 버전. 요소가 많아 조합 수가 매우 많은 업홀스터드 컬렉션", "price": "", "year": "2019", "year_bucket": "2019", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Piero Lissoni", "url": "https://www.bebitalia.com/en-us/en-dock-versione-alta-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_dock.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "George", "desc": "좌고를 높인 컨트랙트용 시팅 레인지. 2인·3인과 암체어 2사이즈", "price": "", "year": "2013", "year_bucket": "2013", "category": "Lounge", "config": "3-Seat", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-george-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_george.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Harry", "desc": "단순한 형태에 편안함을 담은 스테디셀러. 2인·3인 3가지 사이즈", "price": "", "year": "1995", "year_bucket": "1990s", "category": "Living", "config": "3-Seat", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-harry-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_harry.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Hollow", "desc": "크기가 다른 모듈 패널을 경첩으로 이어 등·팔걸이를 만드는 구조", "price": "", "year": "2006", "year_bucket": "2005-2009", "category": "Lounge", "config": "Modular", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://www.bebitalia.com/en-us/en-hollow-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_hollow.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Michel Club", "desc": "Michel의 발전형. 일자형·모듈·오토만으로 구성 폭이 넓다", "price": "", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-michel-club-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_michelclub.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Michel Effe", "desc": "Michel의 간결한 버전. 두 가지 깊이로 구성", "price": "", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Antonio Citterio", "url": "https://www.bebitalia.com/en-us/en-michel-effe-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_micheleffe.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Moon System", "desc": "자하 하디드 특유의 곡선. 하나의 덩어리를 깎아낸 듯한 소파-조각", "price": "", "year": "2007", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Zaha Hadid", "url": "https://www.bebitalia.com/en-us/en-moon-system-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_moonsystem.jpg"]}, {"domain": "sofa", "brand_id": "bebitalia", "brand": "B&B Italia", "continent": "europe", "homepage": "https://www.bebitalia.com/", "news_url": "https://www.bebitalia.com/en-us/news.html", "logo": "", "name": "Serie Up 2000", "desc": "1969년 Up 시리즈의 발전형. 신축성 패브릭으로 감싼 표현적 형태", "price": "", "year": "2000", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Gaetano Pesce", "url": "https://www.bebitalia.com/en-us/en-serie-up-2000-divani.html", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/bb_serieup2000.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Big Mama", "desc": "", "price": "", "year": "1992", "year_bucket": "1990s", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Massimo Iosa Ghini", "url": "https://moroso.it/en/prodotti/big-mama/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_bigmama.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Bohemian", "desc": "", "price": "", "year": "2008", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/bohemian/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_bohemian.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Chamfer", "desc": "", "price": "", "year": "2018", "year_bucket": "2018", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/chamfer/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_chamfer.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Cloudscape", "desc": "구름 같은 부드러움을 주제로 한 Diesel Living with Moroso 라인. 초대형 쿠션이 특징", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/cloudscape-sofa/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_cloudscape.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Cuadra-Soft", "desc": "정돈된 선과 넉넉한 볼륨으로 앉는 방식을 다시 해석한 소파", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/cuadra-soft/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_cuadrasoft.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Cuadra-Soft Edge", "desc": "", "price": "", "year": "2026", "year_bucket": "2026", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/cuadra-soft-edge/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_cuadrasoftedge.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "D-Scape", "desc": "Diesel Living with Moroso의 모듈 시팅 시스템", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Glenn Martens (Controvento 협업)", "url": "https://moroso.it/en/prodotti/d-scape/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_dscape.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "D-Uffle", "desc": "", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/d-uffle/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_duffle.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Do-Lo-Rez", "desc": "픽셀처럼 높낮이가 다른 모듈을 조합하는 소파", "price": "", "year": "2008", "year_bucket": "2005-2009", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Ron Arad", "url": "https://moroso.it/en/prodotti/do-lo-rez/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_dolorez.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Doodle", "desc": "", "price": "", "year": "2013", "year_bucket": "2013", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Front", "url": "https://moroso.it/en/prodotti/doodle/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_doodle.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Double Soft Big Easy", "desc": "", "price": "", "year": "1991", "year_bucket": "1990s", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Ron Arad", "url": "https://moroso.it/en/prodotti/double-soft-big-easy/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_doublesoftbigeasy.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Fjord", "desc": "", "price": "", "year": "2002", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/fjord-5/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_fjord.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gemma", "desc": "", "price": "", "year": "2016", "year_bucket": "2016", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Daniel Libeskind", "url": "https://moroso.it/en/prodotti/gemma-2/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gemma.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gentry", "desc": "구스다운 쿠션과 스틸 프레임 조합의 브랜드 대표 소파", "price": "", "year": "2011", "year_bucket": "2011", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/gentry/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gentry.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gentry Extra Light", "desc": "", "price": "", "year": "2018", "year_bucket": "2018", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/gentry-extra-light/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gentryextralight.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gimme Shelter", "desc": "", "price": "", "year": "2013", "year_bucket": "2013", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/gimme-shelter-2/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gimmeshelter.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gogan", "desc": "물과 시간에 닳은 일본의 돌에서 형태를 가져온 컬렉션", "price": "", "year": "2019", "year_bucket": "2019", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/gogan/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gogan.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gruuve", "desc": "", "price": "", "year": "2024", "year_bucket": "2024", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/gruuve/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gruuve.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Gruuvelot", "desc": "", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/gruuvelot/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_gruuvelot.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "High Cloud", "desc": "", "price": "", "year": "2023", "year_bucket": "2023", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/high-cloud/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_highcloud.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Highlands", "desc": "", "price": "", "year": "2003", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/highlands/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_highlands.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Josephine", "desc": "각진 형태에서 벗어나 팔걸이와 등받이를 둥글게 처리한 소파", "price": "", "year": "2017", "year_bucket": "2017", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Gordon Guillaumier", "url": "https://moroso.it/en/prodotti/josephine/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_josephine.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Juju Rendez-vous", "desc": "", "price": "", "year": "2016", "year_bucket": "2016", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Edward Van Vliet", "url": "https://moroso.it/en/prodotti/juju-rendez-vous/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_jujurendezvous.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Karmakoma", "desc": "", "price": "", "year": "2008", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Edward Van Vliet", "url": "https://moroso.it/en/prodotti/karmakoma/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_karmakoma.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Mr Loveland", "desc": "", "price": "", "year": "2023", "year_bucket": "2023", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/mr-loveland/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_mrloveland.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Lowland", "desc": "", "price": "", "year": "2000", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/lowland/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_lowland.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Lowseat", "desc": "슬레드 베이스의 낮은 좌면 소파. 커버 탈착 가능", "price": "", "year": "2000", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/lowseat-3/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_lowseat.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "M.a.s.s.a.s.", "desc": "", "price": "", "year": "2012", "year_bucket": "2012", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/m-a-s-s-a-s-2/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_massas.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Me-Time", "desc": "", "price": "", "year": "2025", "year_bucket": "2025", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "García Cumini", "url": "https://moroso.it/en/prodotti/me-time/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_metime.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Misfits", "desc": "유연한 볼륨의 요소를 조합하는 조각적 시팅 레인지", "price": "", "year": "2007", "year_bucket": "2005-2009", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Ron Arad", "url": "https://moroso.it/en/prodotti/misfits/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_misfits.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Modernista", "desc": "", "price": "", "year": "2017", "year_bucket": "2017", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Doshi & Levien", "url": "https://moroso.it/en/prodotti/modernista-2/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_modernista.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "My Beautiful Backside", "desc": "", "price": "", "year": "2008", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Doshi & Levien", "url": "https://moroso.it/en/prodotti/my-beautiful-backside/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_mybeautifulbackside.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Nebula Light", "desc": "", "price": "", "year": "2019", "year_bucket": "2019", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/nebula-light/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_nebulalight.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Nebula Night", "desc": "", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/nebula-night/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_nebulanight.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Nebula Nine", "desc": "", "price": "", "year": "2009", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Diesel Designers", "url": "https://moroso.it/en/prodotti/nebula-nine-sofa/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_nebulanine.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "New-tone", "desc": "", "price": "", "year": "1989", "year_bucket": "1980s", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Massimo Iosa Ghini", "url": "https://moroso.it/en/prodotti/new-tone/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_newtone.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Ottoman", "desc": "", "price": "", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "Ottoman", "type": "Fabric", "material": "", "designer": "Scholten & Baijings", "url": "https://moroso.it/en/prodotti/ottoman/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_ottoman.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Pacific", "desc": "", "price": "", "year": "2021", "year_bucket": "2021", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/pacific-sofa/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_pacific.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Paper Planes", "desc": "", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Doshi & Levien", "url": "https://moroso.it/en/prodotti/paper-planes/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_paperplanes.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Pebble Rubble", "desc": "", "price": "", "year": "2022", "year_bucket": "2022", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Front", "url": "https://moroso.it/en/prodotti/pebble-rubble/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_pebblerubble.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Pipe", "desc": "", "price": "", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Sebastian Herkner", "url": "https://moroso.it/en/prodotti/pipe/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_pipe.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Redondo", "desc": "", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/redondo/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_redondo.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Rich", "desc": "", "price": "", "year": "1989", "year_bucket": "1980s", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Antonio Citterio", "url": "https://moroso.it/en/prodotti/rich-3/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_rich.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Rich Cushion", "desc": "", "price": "", "year": "1989", "year_bucket": "1980s", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Antonio Citterio", "url": "https://moroso.it/en/prodotti/rich-cushion/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_richcushion.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Rift", "desc": "", "price": "", "year": "2009", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Leather", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/rift/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_rift.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Salon Nana", "desc": "", "price": "", "year": "", "year_bucket": "unknown", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "", "url": "https://moroso.it/en/prodotti/salon-nana-sofa/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_salonnana.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Saruyama", "desc": "세 개의 독립 요소를 합치면 하나의 큰 원형 시팅이 되는 구성", "price": "", "year": "1989", "year_bucket": "1980s", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Toshiyuki Kita", "url": "https://moroso.it/en/prodotti/saruyama/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_saruyama.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Saruyama Island", "desc": "", "price": "", "year": "2006", "year_bucket": "2005-2009", "category": "Living", "config": "Modular", "type": "Fabric", "material": "", "designer": "Toshiyuki Kita", "url": "https://moroso.it/en/prodotti/saruyama-island/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_saruyamaisland.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Saula Marina", "desc": "", "price": "", "year": "1995", "year_bucket": "1990s", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Javier Mariscal", "url": "https://moroso.it/en/prodotti/saula-marina/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_saulamarina.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Shanghai Tip", "desc": "", "price": "", "year": "2006", "year_bucket": "2005-2009", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/shanghai-tip/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_shanghaitip.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Silver Lake", "desc": "", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/silver-lake/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_silverlake.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Spring", "desc": "식물성 오일 기반 마이크로셀 폼을 사용. 커버 탈착 가능", "price": "", "year": "2010", "year_bucket": "2010", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/spring/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_spring.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Square", "desc": "", "price": "", "year": "2022", "year_bucket": "2022", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Jonathan Olivares", "url": "https://moroso.it/en/prodotti/square/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_square.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Taba", "desc": "", "price": "", "year": "2020", "year_bucket": "2020", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Alfredo Häberli", "url": "https://moroso.it/en/prodotti/taba/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_taba.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Tender", "desc": "", "price": "", "year": "2015", "year_bucket": "2015", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Patricia Urquiola", "url": "https://moroso.it/en/prodotti/tender/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_tender.jpg"]}, {"domain": "sofa", "brand_id": "moroso", "brand": "Moroso", "continent": "europe", "homepage": "https://moroso.it/", "news_url": "https://moroso.it/en/news", "logo": "", "name": "Victoria and Albert", "desc": "", "price": "", "year": "2000", "year_bucket": "2000-2004", "category": "Living", "config": "", "type": "Fabric", "material": "", "designer": "Ron Arad", "url": "https://moroso.it/en/prodotti/victoria-and-albert/", "images": ["https://raw.githubusercontent.com/jaeyoungkim-jay/furniture-library-images/main/sofa/moroso_victoriaandalbert.jpg"]}];
+  const BRANDS = [["vitra", "Vitra", "europe"], ["saba", "Saba Italia", "europe"], ["bebitalia", "B&B Italia", "europe"], ["moroso", "Moroso", "europe"]];
+  const CATEGORIES = ["Booth", "Living", "Lounge", "Modular"];
+  const YEAR_BUCKETS = [{"key": "2026", "label": "2026", "sort": 2026}, {"key": "2025", "label": "2025", "sort": 2025}, {"key": "2024", "label": "2024", "sort": 2024}, {"key": "2023", "label": "2023", "sort": 2023}, {"key": "2022", "label": "2022", "sort": 2022}, {"key": "2021", "label": "2021", "sort": 2021}, {"key": "2020", "label": "2020", "sort": 2020}, {"key": "2019", "label": "2019", "sort": 2019}, {"key": "2018", "label": "2018", "sort": 2018}, {"key": "2017", "label": "2017", "sort": 2017}, {"key": "2016", "label": "2016", "sort": 2016}, {"key": "2015", "label": "2015", "sort": 2015}, {"key": "2014", "label": "2014", "sort": 2014}, {"key": "2013", "label": "2013", "sort": 2013}, {"key": "2012", "label": "2012", "sort": 2012}, {"key": "2011", "label": "2011", "sort": 2011}, {"key": "2010", "label": "2010", "sort": 2010}, {"key": "2005-2009", "label": "2005–2009", "sort": 2005}, {"key": "2000-2004", "label": "2000–2004", "sort": 2000}, {"key": "1990s", "label": "1990s", "sort": 1990}, {"key": "1980s", "label": "1980s", "sort": 1980}, {"key": "1970s", "label": "1970s", "sort": 1970}, {"key": "1960s", "label": "1960s", "sort": 1960}, {"key": "1940s", "label": "1940s", "sort": 1940}, {"key": "unknown", "label": "Unknown", "sort": -999999}];
+  const TYPES = ["Fabric", "Leather"];
+  const CONFIGS = ["2-Seat", "3-Seat", "Modular", "Ottoman"];
+  const BRAND_HISTORY = {};
+  const BRAND_MISC = {"vitra": {"logo": "", "homepage": "https://www.vitra.com/", "name": "Vitra"}, "saba": {"logo": "", "homepage": "https://sabaitalia.com/", "name": "Saba Italia"}, "bebitalia": {"logo": "", "homepage": "https://www.bebitalia.com/", "name": "B&B Italia"}, "moroso": {"logo": "", "homepage": "https://moroso.it/", "name": "Moroso"}};
+  const contLabel = { "north-america": "North America", "europe": "Europe", "asia": "Asia", "oceania": "Oceania" };
+
+  document.getElementById("brandCount").textContent = BRANDS.length;
+  document.getElementById("productCount").textContent = DATA.length;
+
+  const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M4 16V4a2 2 0 0 1 2-2h10"></path></svg>';
+
+  let state = { cont: "all", cat: "all", type: "all", config: "all", brand: "all", year: "all", q: "" };
+  let expanded = new Set();
+  let yearListOpen = false;
+  let selected = null;
+  let brandDocOpen = false;
+  let detIndex = 0;
+  let navStack = [{ type: "home" }];
+  let navIndex = 0;
+  let lbImages = [];
+  let lbIndex = 0;
+
+  async function copyImage(dataUri, btn) {
+    if (!dataUri) return;
+    try {
+      const res = await fetch(dataUri);
+      const blob = await res.blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      btn.classList.add("copied");
+      setTimeout(() => btn.classList.remove("copied"), 1200);
+    } catch (e) {
+      console.warn("copy failed", e);
+    }
+  }
+
+  function openLightbox() {
+    if (!selected || !selected.images.length) return;
+    lbImages = selected.images;
+    lbIndex = detIndex;
+    showLightboxImg();
+    document.getElementById("lightboxBg").classList.add("open");
+  }
+  function closeLightbox() { document.getElementById("lightboxBg").classList.remove("open"); }
+  function showLightboxImg() {
+    document.getElementById("lightboxImg").src = lbImages[lbIndex];
+    document.getElementById("lbPrev").style.display = lbImages.length > 1 ? "block" : "none";
+    document.getElementById("lbNext").style.display = lbImages.length > 1 ? "block" : "none";
+  }
+  function lbStep(dir) {
+    lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+    showLightboxImg();
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!document.getElementById("lightboxBg").classList.contains("open")) return;
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") lbStep(-1);
+    if (e.key === "ArrowRight") lbStep(1);
+  });
+
+  function renderDots() {
+    const dots = document.getElementById("dDots");
+    dots.innerHTML = "";
+    const multi = selected && selected.images.length > 1;
+    document.getElementById("dPrev").style.display = multi ? "flex" : "none";
+    document.getElementById("dNext").style.display = multi ? "flex" : "none";
+    dots.style.display = multi ? "flex" : "none";
+    if (!multi) return;
+    selected.images.forEach((img, i) => {
+      const d = document.createElement("button");
+      d.className = "gal-dot" + (i === detIndex ? " on" : "");
+      d.onclick = (e) => { e.stopPropagation(); detGoTo(i); };
+      dots.appendChild(d);
+    });
+  }
+  function detGoTo(i) {
+    detIndex = i;
+    document.getElementById("dImg").src = selected.images[detIndex];
+    renderDots();
+  }
+  function detStep(dir) {
+    detGoTo((detIndex + dir + selected.images.length) % selected.images.length);
+  }
+
+  function renderYearList() {
+    const wrap = document.getElementById("yearList");
+    wrap.innerHTML = "";
+    const allBtn = document.getElementById("yearAllBtn");
+    allBtn.className = "fb" + (state.year === "all" ? " on" : "");
+    const allCnt = DATA.filter(p => matchFilters(p, { year: "all" })).length;
+    allBtn.innerHTML = `<span class="chev">${yearListOpen ? "&#9662;" : "&#9656;"}</span><span>All</span><span class="cnt">${allCnt}</span>`;
+    allBtn.onclick = () => {
+      if (state.year !== "all") { state.year = "all"; yearListOpen = true; refresh(); return; }
+      yearListOpen = !yearListOpen;
+      renderYearList();
+    };
+    if (!yearListOpen) return;
+    YEAR_BUCKETS.forEach(yb => {
+      const cnt = DATA.filter(p => matchFilters(p, { year: yb.key })).length;
+      if (!cnt) return;
+      const btn = document.createElement("button");
+      btn.className = "fb fb-sub" + (state.year === yb.key ? " on" : "");
+      btn.innerHTML = yb.label + ` <span class="cnt">${cnt}</span>`;
+      btn.onclick = () => { state.year = state.year === yb.key ? "all" : yb.key; refresh(); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderCatList() {
+    const wrap = document.getElementById("catList");
+    wrap.innerHTML = "";
+    document.getElementById("catAllBtn").classList.toggle("on", state.cat === "all");
+    document.getElementById("cnt-cat-all").textContent = DATA.filter(p => matchFilters(p, { cat: "all" })).length;
+    CATEGORIES.forEach(cat => {
+      const cnt = DATA.filter(p => matchFilters(p, { cat: cat })).length;
+      const btn = document.createElement("button");
+      btn.className = "fb" + (state.cat === cat ? " on" : "");
+      btn.innerHTML = cat + ` <span class="cnt">${cnt}</span>`;
+      btn.onclick = () => { state.cat = state.cat === cat ? "all" : cat; refresh(); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderTypeList() {
+    const wrap = document.getElementById("typeList");
+    wrap.innerHTML = "";
+    document.getElementById("typeAllBtn").classList.toggle("on", state.type === "all");
+    document.getElementById("cnt-type-all").textContent = DATA.filter(p => matchFilters(p, { type: "all" })).length;
+    TYPES.forEach(t => {
+      const cnt = DATA.filter(p => matchFilters(p, { type: t })).length;
+      const btn = document.createElement("button");
+      btn.className = "fb" + (state.type === t ? " on" : "");
+      btn.innerHTML = t + ` <span class="cnt">${cnt}</span>`;
+      btn.onclick = () => { state.type = state.type === t ? "all" : t; refresh(); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderConfigList() {
+    const wrap = document.getElementById("configList");
+    wrap.innerHTML = "";
+    document.getElementById("configAllBtn").classList.toggle("on", state.config === "all");
+    document.getElementById("cnt-config-all").textContent = DATA.filter(p => matchFilters(p, { config: "all" })).length;
+    CONFIGS.forEach(c => {
+      const cnt = DATA.filter(p => matchFilters(p, { config: c })).length;
+      const btn = document.createElement("button");
+      btn.className = "fb" + (state.config === c ? " on" : "");
+      btn.innerHTML = c + ` <span class="cnt">${cnt}</span>`;
+      btn.onclick = () => { state.config = state.config === c ? "all" : c; refresh(); };
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderBrandList() {
+    const wrap = document.getElementById("brandList");
+    wrap.innerHTML = "";
+    ["north-america", "europe", "asia", "oceania"].forEach(cont => {
+      const brandsInCont = BRANDS.filter(b => b[2] === cont);
+      if (!brandsInCont.length) return;
+
+      const isOpen = expanded.has(cont);
+      const header = document.createElement("button");
+      header.className = "fb-cont" + (state.brand !== "all" && state.cont === cont ? " on" : "");
+      const contCnt = DATA.filter(p => matchFilters(p, { cont: cont, brand: "all" })).length;
+      header.innerHTML = `<span class="chev">${isOpen ? "&#9662;" : "&#9656;"}</span><span>${contLabel[cont]}</span><span class="cnt">${contCnt}</span>`;
+      header.onclick = () => {
+        if (isOpen) expanded.delete(cont); else expanded.add(cont);
+        renderBrandList();
+      };
+      wrap.appendChild(header);
+      if (!isOpen) return;
+
+      brandsInCont.forEach(b => {
+        const btn = document.createElement("button");
+        btn.className = "fb fb-sub" + (state.brand === b[0] ? " on" : "");
+        const cnt = DATA.filter(p => matchFilters(p, { brand: b[0], cont: "all" })).length;
+        btn.innerHTML = b[1] + ` <span class="cnt">${cnt}</span>`;
+        btn.onclick = () => {
+          if (state.brand === b[0]) { state.brand = "all"; }
+          else { state.brand = b[0]; state.cont = cont; }
+          refresh();
+        };
+        wrap.appendChild(btn);
+      });
+    });
+  }
+
+  function renderBrandInfo() {
+    const wrap = document.getElementById("brandInfoWrap");
+    const misc = BRAND_MISC[state.brand];
+    if (state.brand === "all" || !misc) {
+      wrap.innerHTML = "";
+      if (brandDocOpen) closeBrandDoc(false);
+      return;
+    }
+    const info = BRAND_HISTORY[state.brand];
+    const meta = BRANDS.find(b => b[0] === state.brand);
+    const logoHtml = misc.logo ? `<img src="${misc.logo}" alt="">` : "";
+    if (!info) {
+      const homeBtn = misc.homepage
+        ? `<a class="bi-home-btn" href="${misc.homepage}" target="_blank" rel="noopener">${misc.name} Homepage &#8599;</a>`
+        : "";
+      wrap.innerHTML = `
+        <div class="brand-info">
+          <div class="bi-logo-row">
+            <div class="bi-logo-wrap">${logoHtml}</div>
+            ${homeBtn}
+          </div>
+        </div>`;
+      if (brandDocOpen) closeBrandDoc(false);
+      return;
+    }
+    const homeBtn = misc.homepage
+      ? `<a class="bi-home-btn" href="${misc.homepage}" target="_blank" rel="noopener">공식 홈페이지 &#8599;</a>`
+      : "";
+    wrap.innerHTML = `
+      <div class="brand-info">
+        <div class="bi-logo-row">
+          <div class="bi-logo-wrap">${logoHtml}</div>
+          ${homeBtn}
+        </div>
+        <div class="bi-body">
+          <p class="bi-name">${meta ? meta[1] : ""}</p>
+          <p class="bi-summary">${info.summary || ""}</p>
+          <div class="bi-facts">
+            ${info.founded ? `<div class="bi-fact"><b>Founded</b>${info.founded}</div>` : ""}
+            ${info.hq ? `<div class="bi-fact"><b>HQ</b>${info.hq}</div>` : ""}
+            ${info.signature ? `<div class="bi-fact"><b>Signature</b>${info.signature}</div>` : ""}
+          </div>
+          <div class="bi-actions">
+            <button class="bi-detail-btn" onclick="openBrandDoc()">브랜드 히스토리 보기</button>
+            ${info.source_url ? `<a class="bi-source-link" href="${info.source_url}" target="_blank" rel="noopener">원본 문서${info.source_url.includes("atlassian.net") ? " (Confluence)" : ""}</a>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderBrandDoc() {
+    const info = BRAND_HISTORY[state.brand];
+    if (!info) { closeBrandDoc(false); return; }
+    document.getElementById("brandDocView").innerHTML = `
+      <div class="brand-doc">
+        <div class="brand-doc-hdr">
+          <button class="brand-doc-back" onclick="closeBrandDoc()">&larr; 목록으로</button>
+        </div>
+        <div class="brand-doc-body">${info.html}</div>
+      </div>`;
+  }
+
+  function openBrandDoc(record) {
+    brandDocOpen = true;
+    renderBrandDoc();
+    document.getElementById("mainGridView").style.display = "none";
+    document.getElementById("brandDocView").style.display = "block";
+    if (record !== false) pushNav({ type: "branddoc", brand: state.brand });
+    updateNavButtons();
+  }
+
+  function closeBrandDoc(record) {
+    brandDocOpen = false;
+    document.getElementById("mainGridView").style.display = "";
+    document.getElementById("brandDocView").style.display = "none";
+    if (record !== false) pushNav({ type: "home" });
+    updateNavButtons();
+  }
+
+  function matchFilters(p, overrides) {
+    const s = Object.assign({}, state, overrides || {});
+    if (s.cont && s.cont !== "all" && p.continent !== s.cont) return false;
+    if (s.cat && s.cat !== "all" && p.category !== s.cat) return false;
+    if (s.type && s.type !== "all" && p.type !== s.type) return false;
+    if (s.config && s.config !== "all" && p.config !== s.config) return false;
+    if (s.brand && s.brand !== "all" && p.brand_id !== s.brand) return false;
+    if (s.year && s.year !== "all" && p.year_bucket !== s.year) return false;
+    if (s.q) {
+      const q = s.q.toLowerCase();
+      if (!(p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || (p.desc || "").toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    const list = DATA.filter(p => matchFilters(p));
+    document.getElementById("gridMeta").textContent = list.length + "개 제품";
+    if (list.length === 0) {
+      grid.innerHTML = '<div class="state"><div class="ico">&#129681;</div><p>조건에 맞는 제품이 없습니다.</p></div>';
+      return;
+    }
+    list.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card" + (selected === p ? " sel" : "");
+      const logoHtml = p.logo
+        ? `<div class="logochip" data-brand="${p.brand_id}"><img src="${p.logo}" alt="${p.brand}"></div>`
+        : `<div class="logochip textonly">${p.brand}</div>`;
+      card.innerHTML = `
+        <div class="imgwrap">
+          <img class="pimg" src="${(p.images[0] || "")}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0">
+          ${logoHtml}
+          <button class="copy-btn" title="이미지 복사">${COPY_ICON}</button>
+        </div>
+        <div class="body">
+          <p class="pname">${p.name}</p>
+          <p class="brandname">${p.brand}</p>
+          <div class="tags">
+            <span class="tag cont-${p.continent}">${contLabel[p.continent]}</span>
+            ${p.category ? `<span class="tag">${p.category}</span>` : ""}
+            ${p.type ? `<span class="tag">${p.type}</span>` : ""}
+            ${p.year ? `<span class="tag">${p.year}</span>` : ""}
+          </div>
+          <span class="price">${p.price || ""}</span>
+        </div>`;
+      card.querySelector(".copy-btn").addEventListener("click", (e) => { e.stopPropagation(); copyImage((p.images[0] || ""), e.currentTarget); });
+      const logoChip = card.querySelector(".logochip");
+      if (logoChip) logoChip.addEventListener("click", (e) => { e.stopPropagation(); filterByBrand(p); });
+      card.addEventListener("click", () => selectCard(p));
+      grid.appendChild(card);
+    });
+  }
+
+  function filterByBrand(p) {
+    state.brand = p.brand_id;
+    state.cont = p.continent;
+    closeDetail(false);
+    refresh();
+  }
+
+  function selectCard(p, record) {
+    selected = p;
+    detIndex = 0;
+    closeSidebar();
+    document.getElementById("detail").classList.remove("hide");
+    document.getElementById("detEmpty").style.display = "none";
+    const filled = document.getElementById("detFilled");
+    filled.style.display = "flex";
+    document.getElementById("dImg").src = (p.images[0] || "");
+    document.getElementById("dBrand").textContent = p.brand;
+    const logoEl = document.getElementById("dLogo");
+    if (p.logo) { logoEl.src = p.logo; logoEl.dataset.brand = p.brand_id; logoEl.style.display = "block"; } else { logoEl.style.display = "none"; }
+    document.getElementById("dBrandRow").onclick = () => filterByBrand(p);
+    document.getElementById("dName").textContent = p.name;
+    document.getElementById("dDesc").textContent = p.desc;
+    document.getElementById("dPriceRow").style.display = p.price ? "" : "none";
+    document.getElementById("dPrice").textContent = p.price || "";
+    document.getElementById("dYear").textContent = p.year || "미상";
+    document.getElementById("dCategory").textContent = p.category || "—";
+    document.getElementById("dType").textContent = p.type || "—";
+    document.getElementById("dMaterial").textContent = p.material || "—";
+    document.getElementById("dConfig").textContent = p.config || "—";
+    document.getElementById("dDesigner").textContent = p.designer || "—";
+    document.getElementById("dLink").href = p.url;
+    renderDots();
+    renderGrid();
+    if (record !== false) pushNav({ type: "detail", product: p });
+    updateNavButtons();
+  }
+
+  function closeDetail(record) {
+    selected = null;
+    document.getElementById("detail").classList.add("hide");
+    renderGrid();
+    if (record !== false) pushNav({ type: "home" });
+    updateNavButtons();
+  }
+
+  function pushNav(entry) {
+    const top = navStack[navIndex];
+    if (top && top.type === "home" && entry.type === "home") { updateNavButtons(); return; }
+    navStack = navStack.slice(0, navIndex + 1);
+    navStack.push(entry);
+    navIndex = navStack.length - 1;
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    document.getElementById("btnBack").disabled = navIndex <= 0;
+    document.getElementById("btnForward").disabled = navIndex >= navStack.length - 1;
+  }
+
+  function applyNavEntry(entry) {
+    if (entry.type === "home") {
+      if (brandDocOpen) closeBrandDoc(false);
+      if (selected) closeDetail(false);
+    } else if (entry.type === "detail") {
+      if (brandDocOpen) closeBrandDoc(false);
+      selectCard(entry.product, false);
+    } else if (entry.type === "branddoc") {
+      if (selected) closeDetail(false);
+      state.brand = entry.brand;
+      refresh();
+      openBrandDoc(false);
+    }
+    updateNavButtons();
+  }
+
+  function goBack() {
+    if (navIndex > 0) { navIndex--; applyNavEntry(navStack[navIndex]); }
+  }
+
+  function goForward() {
+    if (navIndex < navStack.length - 1) { navIndex++; applyNavEntry(navStack[navIndex]); }
+  }
+
+  function goHome() {
+    state = { cont: "all", cat: "all", type: "all", brand: "all", year: "all", q: "" };
+    document.getElementById("searchInp").value = "";
+    if (brandDocOpen) closeBrandDoc(false);
+    if (selected) closeDetail(false);
+    refresh();
+    pushNav({ type: "home" });
+  }
+
+  function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("open");
+    document.getElementById("sidebarBackdrop").classList.toggle("show");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebarBackdrop").classList.remove("show");
+  }
+  document.getElementById("sidebar").addEventListener("click", (e) => {
+    if (e.target.closest(".fb") && window.innerWidth <= 860) closeSidebar();
+  });
+
+  function refresh() {
+    document.getElementById("brandAllBtn").classList.toggle("on", state.cont === "all" && state.brand === "all");
+    renderYearList();
+    renderCatList();
+    renderTypeList();
+    renderConfigList();
+    renderBrandList();
+    renderBrandInfo();
+    renderGrid();
+  }
+
+  document.getElementById("brandAllBtn").addEventListener("click", () => {
+    state.cont = "all"; state.brand = "all"; refresh();
+  });
+
+  document.getElementById("typeAllBtn").addEventListener("click", () => {
+    state.type = "all"; refresh();
+  });
+
+  document.getElementById("catAllBtn").addEventListener("click", () => {
+    state.cat = "all"; refresh();
+  });
+
+  document.getElementById("configAllBtn").addEventListener("click", () => {
+    state.config = "all"; refresh();
+  });
+
+  document.getElementById("searchInp").addEventListener("input", (e) => {
+    state.q = e.target.value;
+    renderGrid();
+  });
+
+  refresh();
+</script>
